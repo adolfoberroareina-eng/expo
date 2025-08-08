@@ -42,7 +42,7 @@ export default function Layout() {
           />
           <NativeTabs.Trigger name="faces" options={{ title: 'Face Gallery' }}>
             <Icon sf="lock.applewatch" selectedSf="lock.open.applewatch" drawable="ic_lock_open" />
-            <Label>Face Gallery</Label>
+            <Label hidden />
           </NativeTabs.Trigger>
           <NativeTabs.Trigger name="four">
             <Icon
@@ -57,6 +57,7 @@ export default function Layout() {
           {activeTabs.map((tab) => (
             <NativeTabs.Trigger key={tab} name={tab}>
               <Icon sf="plus" drawable="ic_search" />
+              <Badge />
             </NativeTabs.Trigger>
           ))}
         </NativeTabs>
