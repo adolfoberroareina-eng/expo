@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podrás ganarle al gato</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+        }
+        .container-game {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #2c2c2c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .cell:hover {
+            background-color: #3a3a3a;
+        }
+        .message-box, .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2c2c2c;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+            width: 90%;
+            max-width: 500px;
+        }
+        .message-box button, .modal button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .modal .close-btn {
+            background-color: transparent;
+            color: white;
+            font-size: 1.5rem;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 0.5rem;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 99;
+            display: none;
+        }
+        .menu-sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: #1f2937;
+            color: white;
+            padding: 1.5rem;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+            transition: left 0.3s ease;
+            z-index: 1000;
+        }
+        .menu-sidebar.open {
+            left: 0;
+        }
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+
+    <!-- Botón para abrir el menú -->
+    <button id="menu-btn" class="absolute top-4 left-4 p-2 bg-gray-700 hover:bg-gray-600 rounded-lg shadow-lg z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+    </button>
+
+    <!-- Overlay del menú -->
+    <div id="menu-overlay" class="menu-overlay"></div>
+
+    <!-- Menú lateral -->
+    <div id="menu-sidebar" class="menu-sidebar">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold">Opciones</h2>
+            <button id="close-menu-btn" class="text-white hover:text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <p class="text-xl font-semibold mb-2">Cambiar dificultad:</p>
+        <select id="difficulty-select" class="w-full p-2 rounded-lg bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="facil">Fácil</option>
+            <option value="dificil" selected>Difícil</option>
+        </select>
+
+        <p class="text-xl font-semibold mt-6 mb-2">Controles:</p>
+        <button id="reset-score-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+            Reiniciar Marcador
+        </button>
+    </div>
+
+    <div class="container-game p-6 bg-gray-800 rounded-2xl shadow-lg w-full max-w-sm mx-auto">
+        <!-- Emoji de gato en lugar del logo -->
+        <span class="block text-center text-8xl mb-6">🐱</span>
+
+        <h1 class="text-4xl font-bold mb-6 text-center">Podrás ganarle al gato</h1>
+        
+        <div class="flex justify-around items-center w-full mb-6 text-xl">
+            <div class="text-center">
+                <p class="text-xl font-semibold">Tú</p>
+                <p class="text-4xl font-bold" id="player-score">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xl font-semibold">Dinero</p>
+                <p class="text-4xl font-bold" id="money-display">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xl font-semibold">IA</p>
+                <p class="text-4xl font-bold" id="ai-score">0</p>
+            </div>
+        </div>
+
+        <div class="board" id="board">
+            <!-- Las celdas se generarán con JavaScript -->
+        </div>
+        
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-8 w-full">
+            <button id="redeem-code-btn" class="w-full sm:w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Canjear Código
+            </button>
+            <button id="shop-btn" class="w-full sm:w-1/2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Tienda
+            </button>
+        </div>
+        <button id="reset-round-btn" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+            Reiniciar Ronda
+        </button>
+    </div>
+
+    <!-- Modals y Overlays -->
+    <div id="message-box" class="message-box">
+        <span id="message-text" class="text-2xl font-bold"></span>
+        <button onclick="closeMessage()">Cerrar</button>
+    </div>
+    
+    <div id="code-modal" class="modal">
+        <button class="close-btn" onclick="closeModal('code')">&times;</button>
+        <h3 class="text-3xl font-bold mb-4">Canjear Código</h3>
+        <p class="mb-4">Ingresa un código para obtener recompensas.</p>
+        <input type="text" id="code-input-modal" class="w-full p-2 rounded-lg bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" placeholder="Ingresa tu código aquí">
+        <button id="redeem-code-modal-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Canjear</button>
+    </div>
+
+    <div id="shop-modal" class="modal">
+        <button class="close-btn" onclick="closeModal('shop')">&times;</button>
+        <h3 class="text-3xl font-bold mb-4">Tienda</h3>
+        <p class="text-xl mb-4">Tu dinero: <span id="shop-money-display" class="font-bold">0</span></p>
+        <div id="shop-items" class="flex flex-col space-y-4 text-left">
+            <!-- Los artículos de la tienda se generarán aquí -->
+        </div>
+    </div>
+    
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <script>
+        // Variables del juego
+        const boardElement = document.getElementById('board');
+        const cells = [];
+        let boardState = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let isGameOver = false;
+        let difficulty = 'dificil';
+        let playerScore = 0;
+        let aiScore = 0;
+        let money = 0;
+        let playerSymbol = 'X';
+        let aiSymbol = 'O';
+        const WIN_SCORE = 10;
+        
+        const playerScoreElement = document.getElementById('player-score');
+        const aiScoreElement = document.getElementById('ai-score');
+        const moneyDisplayElement = document.getElementById('money-display');
+        const menuSidebar = document.getElementById('menu-sidebar');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+
+        // Sección de Códigos Canjeables
+        // Puedes añadir o modificar los códigos aquí.
+        const redeemableCodes = {
+            'dinero-facil': { type: 'money', value: 500, used: false },
+            'dinero-secreto': { type: 'money', value: 1500, used: false },
+            'emoji-fuego': { type: 'item', itemId: '3', used: false }
+        };
+
+        // Artículos de la tienda
+        const storeItems = [
+            { id: '1', name: 'Emoji Fantasma', price: 100, symbol: '👻', owned: false },
+            { id: '2', name: 'Emoji Estrella', price: 250, symbol: '⭐', owned: false },
+            { id: '3', name: 'Emoji Fuego', price: 500, symbol: '🔥', owned: false },
+            { id: '4', name: 'Emoji Ancla', price: 1000, symbol: '⚓', owned: false },
+        ];
+
+        // Función para mostrar un mensaje al usuario
+        function showMessage(text) {
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+            messageText.innerText = text;
+            messageBox.style.display = 'block';
+            document.getElementById('modal-overlay').style.display = 'block';
+        }
+
+        // Función para cerrar el cuadro de mensaje
+        function closeMessage() {
+            document.getElementById('message-box').style.display = 'none';
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+        
+        // Abre un modal (tienda o códigos)
+        function openModal(id) {
+            document.getElementById(`${id}-modal`).style.display = 'block';
+            document.getElementById('modal-overlay').style.display = 'block';
+        }
+
+        // Cierra un modal
+        function closeModal(id) {
+            document.getElementById(`${id}-modal`).style.display = 'none';
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        // Actualiza el marcador y el dinero
+        function updateUI() {
+            playerScoreElement.innerText = playerScore;
+            aiScoreElement.innerText = aiScore;
+            moneyDisplayElement.innerText = money;
+        }
+
+        // Genera el tablero del juego
+        function createBoard() {
+            boardElement.innerHTML = '';
+            cells.length = 0;
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleCellClick, { once: true });
+                boardElement.appendChild(cell);
+                cells.push(cell);
+            }
+        }
+
+        // Manejador del clic en una celda
+        function handleCellClick(event) {
+            if (isGameOver) return;
+
+            const cell = event.target;
+            const index = parseInt(cell.dataset.index);
+
+            if (boardState[index] === '') {
+                boardState[index] = currentPlayer;
+                cell.innerText = currentPlayer === 'X' ? playerSymbol : aiSymbol;
+
+                if (checkWinner(currentPlayer)) {
+                    isGameOver = true;
+                    if (currentPlayer === 'X') {
+                        playerScore++;
+                        money += 20; // Ganas 20 de dinero por ganar
+                        showMessage(`¡Has ganado la ronda! (+20 de dinero)`);
+                    } else {
+                        aiScore++;
+                        showMessage(`¡La IA ha ganado la ronda!`);
+                    }
+                    updateUI();
+                    checkOverallWinner();
+                } else if (isBoardFull()) {
+                    isGameOver = true;
+                    showMessage("¡Es un empate!");
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    if (currentPlayer === 'O') {
+                        setTimeout(aiMove, 500);
+                    }
+                }
+            }
+        }
+
+        // Comprueba si alguien ha llegado a 10 puntos
+        function checkOverallWinner() {
+            if (playerScore >= WIN_SCORE) {
+                showMessage(`¡Felicidades, has ganado el partido con ${playerScore} puntos!`);
+                isGameOver = true;
+            } else if (aiScore >= WIN_SCORE) {
+                showMessage(`¡La IA ha ganado el partido con ${aiScore} puntos!`);
+                isGameOver = true;
+            }
+        }
+
+        // Lógica de la IA (Minimax para dificultad 'dificil', aleatorio para 'facil')
+        function aiMove() {
+            if (isGameOver) return;
+            let move;
+
+            if (difficulty === 'facil') {
+                const availableMoves = boardState.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+                move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            } else {
+                move = findBestMove(boardState);
+            }
+
+            if (move !== undefined) {
+                boardState[move] = 'O';
+                cells[move].innerText = aiSymbol;
+                cells[move].removeEventListener('click', handleCellClick);
+
+                if (checkWinner('O')) {
+                    isGameOver = true;
+                    aiScore++;
+                    showMessage("¡La IA ha ganado la ronda!");
+                    updateUI();
+                    checkOverallWinner();
+                } else if (isBoardFull()) {
+                    isGameOver = true;
+                    showMessage("¡Es un empate!");
+                } else {
+                    currentPlayer = 'X';
+                }
+            }
+        }
+
+        // Algoritmo Minimax (sin cambios)
+        function findBestMove(board) {
+            let bestVal = -Infinity;
+            let bestMove;
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    let moveVal = minimax(board, 0, false);
+                    board[i] = '';
+                    if (moveVal > bestVal) {
+                        bestVal = moveVal;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimax(board, depth, isMaximizingPlayer) {
+            const score = evaluate(board);
+
+            if (score === 10) return score - depth;
+            if (score === -10) return score + depth;
+            if (isBoardFull(board)) return 0;
+
+            if (isMaximizingPlayer) {
+                let best = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        best = Math.max(best, minimax(board, depth + 1, !isMaximizingPlayer));
+                        board[i] = '';
+                    }
+                }
+                return best;
+            } else {
+                let best = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        best = Math.min(best, minimax(board, depth + 1, !isMaximizingPlayer));
+                        board[i] = '';
+                    }
+                }
+                return best;
+            }
+        }
+
+        // Evalúa el estado del tablero (sin cambios)
+        function evaluate(board) {
+            const winConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            for (let i = 0; i < winConditions.length; i++) {
+                const [a, b, c] = winConditions[i];
+                if (board[a] === board[b] && board[a] === board[c]) {
+                    if (board[a] === 'O') return 10;
+                    if (board[a] === 'X') return -10;
+                }
+            }
+            return 0;
+        }
+        
+        // Comprueba si hay un ganador (sin cambios)
+        function checkWinner(player) {
+            const winConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            return winConditions.some(combination => {
+                const [a, b, c] = combination;
+                return boardState[a] !== '' && boardState[a] === boardState[b] && boardState[a] === boardState[c];
+            });
+        }
+
+        // Comprueba si el tablero está lleno (sin cambios)
+        function isBoardFull(board = boardState) {
+            return board.every(cell => cell !== '');
+        }
+
+        // Reinicia solo la ronda actual
+        function resetRound() {
+            boardState = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            isGameOver = false;
+            cells.forEach(cell => {
+                cell.innerText = '';
+                cell.removeEventListener('click', handleCellClick);
+                cell.addEventListener('click', handleCellClick, { once: true });
+            });
+            // Si la IA es el primer jugador
+            if (currentPlayer === 'O') {
+                setTimeout(aiMove, 500);
+            }
+            closeMessage();
+        }
+
+        // Reinicia el marcador completo y la ronda
+        function resetScore() {
+            playerScore = 0;
+            aiScore = 0;
+            updateUI();
+            resetRound();
+        }
+        
+        // Renderiza los artículos de la tienda
+        function renderStoreItems() {
+            const shopItemsContainer = document.getElementById('shop-items');
+            shopItemsContainer.innerHTML = '';
+            storeItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex items-center justify-between p-4 bg-gray-700 rounded-lg";
+                itemDiv.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <span class="text-4xl">${item.symbol}</span>
+                        <div>
+                            <p class="font-bold">${item.name}</p>
+                            <p>${item.price} dinero</p>
+                        </div>
+                    </div>
+                    <button id="buy-${item.id}-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                        ${item.owned ? 'Equipado' : 'Comprar'}
+                    </button>
+                `;
+                shopItemsContainer.appendChild(itemDiv);
+
+                const buyButton = document.getElementById(`buy-${item.id}-btn`);
+                buyButton.addEventListener('click', () => {
+                    if (item.owned) {
+                        playerSymbol = item.symbol;
+                        // Cambiamos el símbolo de la IA para que no sea el mismo
